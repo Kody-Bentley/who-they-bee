@@ -1,28 +1,23 @@
 import requests as requests
-
-
 from pprint import pprint
 import os
 import re
-from PyInquirer import style_from_dict, Token, prompt
-from PyInquirer import Validator, ValidationError
+import sys
+from InquirerPy import prompt
 from Reverse_Phone import reverse_phone
-from Reverse_Email import reverse_email
+from Endato import reverse_email
+from Endato import person
+from Dehashed import dehashed
 from Scrapers import dorks
 from Scanners import nmap_scanner as scanner
+from Socials.Username_search import search
+from pyfiglet import Figlet
+import asyncio
 import json
 
-
-
-STYLE = style_from_dict({
-    Token.QuestionMark: '#E91E63 bold',
-    Token.Selected: '#673AB7 bold',
-    Token.Instruction: '',  # default
-    Token.Answer: '#2196f3 bold',
-    Token.Question: "#243657",
-})
-
 def main():
+    custom_fig = Figlet(font='graffiti')
+    print(custom_fig.renderText('Who They Bee'))
 
     questions = [
 
@@ -30,7 +25,7 @@ def main():
             'type': 'list',
             'name': 'modules',
             'message': 'What module would you like to run?',
-            'choices': ['Reverse Phone', 'Reverse Email', 'Dorks', 'Port Scanner'],
+            'choices': ['Reverse Phone', 'Reverse Email', 'Dorks', 'Port Scanner', 'Dehashed', 'Person', 'Username Checker'],
             'filter': lambda val: val.lower()
         },
     ]
@@ -53,6 +48,19 @@ def main():
                 file.close()
         else:
             pprint(reverse_phone.ReversePhone.get_num(self=reverse_phone))
+            questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+            if prompt(questions)['output'] == 'yes':
+                main()
+            else:
+                sys.exit(1)
     elif answers['modules'] == 'reverse email':
         questions = [
             {
@@ -65,11 +73,24 @@ def main():
         ]
         if prompt(questions)['output'] == 'yes':
             with open('output.txt', 'w') as file:
-                file.write(json.dumps(reverse_email.ReverseEmail(STYLE=STYLE).get_email(), indent=4, sort_keys=True))
+                file.write(json.dumps(reverse_email.ReverseEmail().get_email(), indent=4, sort_keys=True))
                 print(f'Data written to file "output.txt"...')
                 file.close()
         else:
-            pprint(reverse_email.ReverseEmail(STYLE=STYLE).get_email())
+            pprint(reverse_email.ReverseEmail().get_email())
+            questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+            if prompt(questions)['output'] == 'yes':
+                main()
+            else:
+                sys.exit(1)
     elif answers['modules'] == 'dorks':
         questions = [{
             'type': 'input',
@@ -81,12 +102,27 @@ def main():
                 'name': 'num_pages',
                 'message': 'Number of pages to return...'
             }]
+        
         answers = prompt(questions)
+        
         dorks.dorks_search(answers['query'], answers['num_pages'])
+        
+        questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+        if prompt(questions)['output'] == 'yes':
+            main()
+        else:
+            sys.exit(1)
     elif answers['modules'] == 'port scanner':
         full_results = [re.findall('^[\w\?\.]+|(?<=\s)\([\d\.]+\)|(?<=at\s)[\w\:]+', i) for i in os.popen('arp -a')]
         final_results = [dict(zip(['IP', 'LAN_IP', 'MAC_ADDRESS'], i)) for i in full_results]
-        final_results = [{**i, **{'LAN_IP': i['LAN_IP'][1:-1]}} for i in final_results]
         print(f'Final results: {final_results}')
         questions = [{
             'type': 'input',
@@ -100,9 +136,176 @@ def main():
             }
 
         ]
+        
         answers = prompt(questions)
+        
         scanner.default_scanner(answers['ip'], answers['ports'])
-
+        
+        questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+        if prompt(questions)['output'] == 'yes':
+            main()
+        else:
+            sys.exit(1)
+    elif answers['modules'] == 'dehashed':
+        questions = [
+            {
+                'type': 'list',
+                'name': 'output',
+                'message': 'Would you like to output data to JSON file?',
+                'choices': ['Yes', 'No'],
+                'filter': lambda val: val.lower()
+            }
+        ]
+        if prompt(questions)['output'] == 'yes':
+            with open('output.txt', 'w') as file:
+                file.write(json.dumps(reverse_phone.ReversePhone.get_num(self=reverse_phone), indent=4, sort_keys=True))
+                print(f'Data written to file "output.txt"...')
+                file.close()
+        else:
+            module = dehashed.Dehashed.modules()
+            if module == 'email':
+                dehashed.Dehashed.email(self=dehashed)
+                questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+                if prompt(questions)['output'] == 'yes':
+                    main()
+                else:
+                    sys.exit(1)
+            elif module == 'phone':
+                dehashed.Dehashed.phone(self=dehashed)
+                questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+                if prompt(questions)['output'] == 'yes':
+                    main()
+                else:
+                    sys.exit(1)
+            elif module == 'address':
+                dehashed.Dehashed.address(self=dehashed)
+                questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+                if prompt(questions)['output'] == 'yes':
+                    main()
+                else:
+                    sys.exit(1)
+            elif module == 'username':
+                dehashed.Dehashed.username(self=dehashed)
+                questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+                if prompt(questions)['output'] == 'yes':
+                    main()
+                else:
+                    sys.exit(1)
+    elif answers['modules'] == 'person':
+        questions = [
+            {
+                'type': 'list',
+                'name': 'output',
+                'message': 'Would you like to output data to JSON file?',
+                'choices': ['Yes', 'No'],
+                'filter': lambda val: val.lower()
+            }
+        ]
+        if prompt(questions)['output'] == 'yes':
+            with open('./Output/person.json', 'w') as file:
+                raw = json.loads(person.Person.search(self=person))
+                file.write(json.dumps(raw, indent=4, sort_keys=True))
+                print(f'Data written to file "person.json"...')
+                file.close()
+        else:
+            print(person.Person.search(self=person))
+            
+            questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+            if prompt(questions)['output'] == 'yes':
+                main()
+            else:
+                sys.exit(1)
+    elif answers['modules'] == 'username checker':
+        questions = [
+            {
+                'type': 'list',
+                'name': 'output',
+                'message': 'Would you like to output data to JSON file?',
+                'choices': ['Yes', 'No'],
+                'filter': lambda val: val.lower()
+            }
+        ]
+        if prompt(questions)['output'] == 'yes':
+            with open('./Output/username_search.json', 'w') as file:
+                raw = json.loads(person.Person.search(self=person))
+                file.write(json.dumps(raw, indent=4, sort_keys=True))
+                print(f'Data written to file "person.json"...')
+                file.close()
+        else:
+            questions = [
+            {
+                'type': 'input',
+                'name': 'username',
+                'message': 'Input Username To Search',
+                'filter': lambda val: val.lower()
+            }
+        ]
+            answers = prompt(questions)
+            
+            loop = asyncio.get_event_loop()
+            print(loop.run_until_complete(search.UserSearch.main(answers['username'])))
+        
+            questions = [
+                {
+                    'type': 'list',
+                    'name': 'output',
+                    'message': 'Would you like to run another search?',
+                    'choices': ['Yes', 'No'],
+                    'filter': lambda val: val.lower()
+                }
+            ]
+            if prompt(questions)['output'] == 'yes':
+                main()
+            else:
+                sys.exit(1)        
 
 if __name__ == '__main__':
     main()
